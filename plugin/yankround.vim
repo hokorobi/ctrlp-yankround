@@ -5,23 +5,6 @@ scriptencoding utf-8
 let g:yankround_dir = get(g:, 'yankround_dir', '~/.config/vim/yankround')
 let g:yankround_max_history = get(g:, 'yankround_max_history', 30)
 let g:yankround_max_element_length = get(g:, 'yankround_max_element_length', 512000)
-let g:yankround_use_region_hl = get(g:, 'yankround_use_region_hl', 0)
-let g:yankround_region_hl_groupname = get(g:, 'yankround_region_hl_groupname', 'YankRoundRegion')
-"======================================
-nnoremap <silent><Plug>(yankround-p)    :<C-u>exe yankround#init('p')<Bar>call yankround#activate()<CR>
-nnoremap <silent><Plug>(yankround-P)    :<C-u>exe yankround#init('P')<Bar>call yankround#activate()<CR>
-nnoremap <silent><Plug>(yankround-gp)    :<C-u>exe yankround#init('gp')<Bar>call yankround#activate()<CR>
-nnoremap <silent><Plug>(yankround-gP)    :<C-u>exe yankround#init('gP')<Bar>call yankround#activate()<CR>
-xnoremap <silent><Plug>(yankround-p)    :<C-u>exe yankround#init('p', 'v')<Bar>call yankround#activate()<CR>
-xmap <Plug>(yankround-P)  <Plug>(yankround-p)
-xnoremap <silent><Plug>(yankround-gp)    :<C-u>exe yankround#init('gp', 'v')<Bar>call yankround#activate()<CR>
-xmap <Plug>(yankround-gP)  <Plug>(yankround-gp)
-nnoremap <silent><Plug>(yankround-prev)    :<C-u>call yankround#prev()<CR>
-nnoremap <silent><Plug>(yankround-next)    :<C-u>call yankround#next()<CR>
-cnoremap <expr><Plug>(yankround-insert-register)   getcmdline()=="" ? "\<C-r>" : "\<C-\>eyankround#cmdline_base()\<CR>\<C-r>"
-cnoremap <Plug>(yankround-pop)    <C-\>eyankround#cmdline_pop(1)<CR>
-cnoremap <Plug>(yankround-backpop)   <C-\>eyankround#cmdline_pop(-1)<CR>
-
 "=============================================================================
 
 let s:yankround_dir = expand(g:yankround_dir)
@@ -38,25 +21,9 @@ let g:_yankround_stop_caching = 0
 
 aug yankround
   autocmd!
-  if exists('##TextYankPost')
-    autocmd TextYankPost *   call Yankround_append()
-  endif
-  autocmd CursorMoved *   call Yankround_append()
-  autocmd ColorScheme *   call s:define_region_hl()
+  autocmd TextYankPost *   call Yankround_append()
   autocmd VimLeavePre *   call s:_persistent()
-  autocmd CmdwinEnter *   call yankround#on_cmdwinenter()
-  autocmd CmdwinLeave *   call yankround#on_cmdwinleave()
 aug END
-
-function! s:define_region_hl() "{{{
-  if &bg=='dark'
-    highlight default YankRoundRegion   guibg=Brown ctermbg=Brown term=reverse
-  else
-    highlight default YankRoundRegion   guibg=LightRed ctermbg=LightRed term=reverse
-  end
-endfunction
-"}}}
-call s:define_region_hl()
 
 function! Yankround_append() "{{{
   call s:_reloadhistory()

@@ -29,9 +29,9 @@ function! ctrlp#yankround#accept(action, str) "{{{
   let [str, regtype] = yankround#_get_cache_and_regtype(idx)
   call setreg('"', str, regtype)
   if a:action=='e'
-    exe 'norm! P'
-  elseif a:action=='v'
     exe 'norm! p'
+  elseif a:action=='v'
+    exe 'norm! P'
   end
 endfunction
 "}}}

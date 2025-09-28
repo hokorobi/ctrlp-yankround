@@ -44,6 +44,11 @@ export def Accept(action: string, str: string)
 enddef
 
 export def Wipe(entries: list<string>): list<string>
+  if len(entries) == 0
+    g:YankroundCache = []
+    return ctrlp#yankround#Init()
+  endif
+
   var strlist = copy(g:YankroundCache) -> map((_, v) => CacheToCtrlpLine(v))
   var removed_list = []
   var idx: number

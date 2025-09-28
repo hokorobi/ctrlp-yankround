@@ -1,90 +1,102 @@
-if expand('<sfile>:p')!=#expand('%:p') && exists('g:loaded_yankround')| finish| endif| let g:loaded_yankround = 1
-let s:save_cpo = &cpo| set cpo&vim
+vim9script
+if expand('<sfile>:p') !=# expand('%:p') && exists('g:loaded_yankround')
+  finish
+endif
+g:loaded_yankround = 1
+
 scriptencoding utf-8
-"=============================================================================
-let g:yankround_dir = get(g:, 'yankround_dir', '~/.config/vim/yankround')
-let g:yankround_max_history = get(g:, 'yankround_max_history', 30)
-let g:yankround_max_element_length = get(g:, 'yankround_max_element_length', 512000)
-"=============================================================================
 
-let s:yankround_dir = expand(g:yankround_dir)
-if !(s:yankround_dir=='' || isdirectory(s:yankround_dir))
-  call mkdir(s:yankround_dir, 'p')
-end
+# =============================================================================
+g:yankround_dir = get(g:, 'yankround_dir', '~/.config/vim/yankround')
+g:yankround_max_history = get(g:, 'yankround_max_history', 30)
+g:yankround_max_element_length = get(g:, 'yankround_max_element_length', 512000)
+# =============================================================================
 
-let s:path = s:yankround_dir. '/history'
-let s:is_readable = filereadable(s:path)
-let g:_yankround_cache = s:is_readable ? readfile(s:path) : []
-let s:_histfilever = s:is_readable ? getftime(s:path) : 0
-unlet s:path s:is_readable
-let g:_yankround_stop_caching = 0
+var yankround_dir = expand(g:yankround_dir)
+if yankround_dir != '' && !isdirectory(yankround_dir)
+  call mkdir(yankround_dir, 'p')
+endif
 
-aug yankround
+var history_path = yankround_dir .. '/history'
+var is_readable = filereadable(history_path)
+g:YankroundCache = is_readable ? readfile(history_path) : []
+var HistFileVer = is_readable ? getftime(history_path) : 0
+g:YankroundStopCaching = 0
+
+augroup yankround
   autocmd!
-  autocmd TextYankPost *   call Yankround_append()
-  autocmd VimLeavePre *   call s:_persistent()
-aug END
+  autocmd TextYankPost * Yankround_append()
+  autocmd VimLeavePre * Persistent()
+augroup END
 
-function! Yankround_append() "{{{
-  call s:_reloadhistory()
-  if g:_yankround_stop_caching || @" ==# substitute(get(g:_yankround_cache, 0, ''), '^.\d*\t', '', '') || @"=~'^.\?$'
-    \ || g:yankround_max_element_length!=0 && strlen(@")>g:yankround_max_element_length
-    return
-  end
-  call insert(g:_yankround_cache, getregtype('"'). "\t". @")
-  call s:newDupliMiller().mill(g:_yankround_cache)
-  if len(g:_yankround_cache) > g:yankround_max_history
-    call remove(g:_yankround_cache, g:yankround_max_history, -1)
-  end
-  call s:_persistent()
-endfunction
-"}}}
-function! s:_persistent() "{{{
-  if g:yankround_dir=='' || g:_yankround_cache==[]
-    return
-  end
-  let path = s:yankround_dir. '/history'
-  call writefile(g:_yankround_cache, path)
-  let s:_histfilever = getftime(path)
-endfunction
-"}}}
-function! s:_reloadhistory() "{{{
-  if g:yankround_dir==''
-    return
-  end
-  let path = expand(g:yankround_dir). '/history'
-  if !filereadable(path) || getftime(path) <= s:_histfilever
-    return
-  end
-  let g:_yankround_cache = readfile(path)
-  let s:_histfilever = getftime(path)
-endfunction
-"}}}
+def Yankround_append()
+  ReloadHistory()
+  var reg_content = @"
+  var cache_0_content = get(g:YankroundCache, 0, '') -> substitute('^.\d*\t', '', '')
 
-"=============================================================================
-"Misc:
-let s:DupliMiller = {}
-function! s:newDupliMiller() "{{{
-  let obj = copy(s:DupliMiller)
-  let obj.seens = {}
-  return obj
-endfunction
-"}}}
-function! s:DupliMiller._is_firstseen(str) "{{{
-  if has_key(self.seens, a:str)
+  if g:YankroundStopCaching || reg_content ==# cache_0_content || reg_content =~# '^.\?$'
     return
-  end
-  if a:str!=''
-    let self.seens[a:str] = 1
-  end
-  return 1
-endfunction
-"}}}
-function! s:DupliMiller.mill(list) "{{{
-  return filter(a:list, 'self._is_firstseen(v:val)')
-endfunction
-"}}}
+  endif
 
-"=============================================================================
-"END "{{{1
-let &cpo = s:save_cpo| unlet s:save_cpo
+  if g:yankround_max_element_length != 0 && strlen(reg_content) > g:yankround_max_element_length
+    return
+  endif
+
+  call insert(g:YankroundCache, getregtype('"') .. "\t" .. reg_content)
+  g:YankroundCache = DupliMiller(g:YankroundCache)
+
+  if len(g:YankroundCache) > g:yankround_max_history
+    call remove(g:YankroundCache, g:yankround_max_history, -1)
+  endif
+  Persistent()
+enddef
+
+# スクリプトローカル関数: Persistent に変更
+def Persistent()
+  if g:yankround_dir == '' || g:YankroundCache == []
+    return
+  endif
+  var path = yankround_dir .. '/history'
+  call writefile(g:YankroundCache, path)
+  HistFileVer = getftime(path)
+enddef
+
+def ReloadHistory()
+  if g:yankround_dir == ''
+    return
+  endif
+  var path = expand(g:yankround_dir) .. '/history'
+  if !filereadable(path) || getftime(path) <= HistFileVer
+    return
+  endif
+  g:YankroundCache = readfile(path)
+  HistFileVer = getftime(path)
+enddef
+
+# =============================================================================
+# Misc:
+def DupliMiller(list_in: list<any>): list<any>
+  # 結果を格納するリスト
+  var result: list<any> = []
+  # 既に結果リストに追加された要素を記録する集合 (辞書を使用)
+  var seen: dict<number> = {}
+
+  # リストを順順に走査する (最初から最後へ)
+  for item in list_in
+    var item_str = string(item)
+
+    # 'item'がまだ'seen'集合に存在しない場合 (最初に出現した場合)
+    if !has_key(seen, item_str)
+      # 'item'を'result'の末尾に追加 (最初に出現した要素を保持)
+      result->add(item)
+      # 'item'を'seen'集合に追加
+      seen[item_str] = 1
+    # else: 既に'seen'に存在する場合 (後から出現した重複) は何もしない (削除)
+    endif
+  endfor
+
+  return result
+enddef
+
+# =============================================================================
+# END

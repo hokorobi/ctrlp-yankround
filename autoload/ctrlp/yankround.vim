@@ -1,59 +1,69 @@
-if exists('s:save_cpo')| finish| endif
-let s:save_cpo = &cpo| set cpo&vim
-"=============================================================================
-let s:CTRLP_BUILTINS = ctrlp#getvar('g:ctrlp_builtins')
-"======================================
-let s:ctrlp_yankround_var = {'lname': 'yankround', 'sname': 'ykrd', 'type': 'tabe', 'sort': 0, 'nolim': 1, 'opmul': 1}
-let s:ctrlp_yankround_var.init = 'ctrlp#yankround#init()'
-let s:ctrlp_yankround_var.accept = 'ctrlp#yankround#accept'
-let s:ctrlp_yankround_var.wipe = 'ctrlp#yankround#wipe'
-let g:ctrlp_ext_vars = add(get(g:, 'ctrlp_ext_vars', []), s:ctrlp_yankround_var)
-unlet s:ctrlp_yankround_var
-let s:index_id = s:CTRLP_BUILTINS + len(g:ctrlp_ext_vars)
-function! ctrlp#yankround#id() "{{{
-  return s:index_id
-endfunction
-"}}}
-function! ctrlp#yankround#init() "{{{
-  return map(copy(g:_yankround_cache), 's:_cache_to_ctrlpline(v:val)')
-endfunction
-"}}}
-function! ctrlp#yankround#accept(action, str) "{{{
-  if a:action=='t'
+vim9script
+# =============================================================================
+var CtrlpBuiltins = ctrlp#getvar('g:ctrlp_builtins')
+# =======================================
+var CtrlpYankroundVar = {
+  lname: 'yankround',
+  sname: 'ykrd',
+  type: 'tabe',
+  sort: 0,
+  nolim: 1,
+  opmul: 1
+}
+CtrlpYankroundVar.init = 'ctrlp#yankround#Init()'
+CtrlpYankroundVar.accept = 'ctrlp#yankround#Accept'
+CtrlpYankroundVar.wipe = 'ctrlp#yankround#Wipe'
+g:ctrlp_ext_vars = get(g:, 'ctrlp_ext_vars', []) -> add(CtrlpYankroundVar)
+
+var IndexId = CtrlpBuiltins + len(g:ctrlp_ext_vars)
+
+export def Id(): number
+  return IndexId
+enddef
+
+export def Init(): list<string>
+  return copy(g:YankroundCache) -> map((_, v) => CacheToCtrlpLine(v))
+enddef
+
+export def Accept(action: string, str: string)
+  if action == 't'
     return
-  end
-  call ctrlp#exit()
-  let str = a:str
-  let strlist = map(copy(g:_yankround_cache), 's:_cache_to_ctrlpline(v:val)')
-  let idx = index(strlist, str)
-  let [str, regtype] = yankround#_get_cache_and_regtype(idx)
-  call setreg('"', str, regtype)
-  if a:action=='e'
-    exe 'norm! p'
-  elseif a:action=='v'
-    exe 'norm! P'
-  end
-endfunction
-"}}}
-function! ctrlp#yankround#wipe(entries) "{{{
-  let strlist = map(copy(g:_yankround_cache), 's:_cache_to_ctrlpline(v:val)')
-  for item in a:entries
-    let idx = index(strlist, item)
-    let removed = remove(g:_yankround_cache, idx)
+  endif
+
+  ctrlp#exit()
+  var strlist = copy(g:YankroundCache) -> map((_, v) => CacheToCtrlpLine(v))
+  var idx = index(strlist, str)
+  var [yank_str, regtype] = GetCacheAndRegtype(idx)
+  setreg('"', yank_str, regtype)
+
+  if action == 'e'
+    execute 'normal! p'
+  elseif action == 'v'
+    execute 'normal! P'
+  endif
+enddef
+
+export def Wipe(entries: list<string>): list<string>
+  var strlist = copy(g:YankroundCache) -> map((_, v) => CacheToCtrlpLine(v))
+  var removed_list = []
+  var idx: number
+  for item in entries
+    idx = index(strlist, item)
+    remove(g:YankroundCache, idx)
   endfor
-  let @" = @"==#substitute(removed, '^.\d*\t', '', '') ? '' : @"
-  return ctrlp#yankround#init()
-endfunction
-"}}}
-unlet s:CTRLP_BUILTINS
+  return ctrlp#yankround#Init()
+enddef
 
-"======================================
-function! s:_cache_to_ctrlpline(str) "{{{
-  let entry = matchlist(a:str, "^\\(.\\d*\\)\t\\(.*\\)")
-  return strtrans(entry[2])
-endfunction
-"}}}
+# =======================================
+def CacheToCtrlpLine(str: string): string
+  var entry = matchlist(str, '^.\d*\t\(.*\)')
+  return strtrans(entry[1])
+enddef
 
-"=============================================================================
-"END "{{{1
-let &cpo = s:save_cpo| unlet s:save_cpo
+def GetCacheAndRegtype(idx: number): list<string>
+  var ret = matchlist(g:YankroundCache[idx], '^\(.\d*\)\t\(.*\)')
+  return [ret[2], ret[1]]
+enddef
+
+# =============================================================================
+# END
